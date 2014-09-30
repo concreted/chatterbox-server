@@ -5,6 +5,10 @@
  * this file and include it in basic-server.js so that it actually works.
  * *Hint* Check out the node module documentation at http://nodejs.org/api/modules.html. */
 
+var url = require("url");
+var path = require("path");
+var fs = require("fs");
+
 module.exports.handler = function(request, response) {
   /* the 'request' argument comes from nodes http module. It includes info about the
   request - such as what URL the browser is requesting. */
@@ -13,6 +17,9 @@ module.exports.handler = function(request, response) {
    * http://nodemanual.org/0.8.14/nodejs_ref_guide/http.html */
 
   console.log("Serving request type " + request.method + " for url " + request.url);
+
+  var uri = url.parse(request.url).pathname;
+  var filename = path.join(process.cwd() + "/client/client", uri);
 
   var statusCode = 404;
 
@@ -29,13 +36,47 @@ module.exports.handler = function(request, response) {
     if (request.url === '/classes/messages') {
       statusCode = 200;
       output = JSON.stringify(dataStore);
-    }
-    if (request.url === '/classes/room1') {
+      response.writeHead(statusCode, headers);
+      response.end(output);
+      return;
+    } else if (request.url === '/classes/room1') {
       statusCode = 200;
       output = JSON.stringify(dataStore);
+      response.writeHead(statusCode, headers);
+      response.end(output);
+      return;
+    } else {
+      path.exists(filename, function(exists) {
+        if(!exists) {
+          response.writeHead(404, {"Content-Type": "text/plain"});
+          response.write("404 Not Found\n");
+          response.end();
+          return;
+        }
+
+        if (fs.statSync(filename).isDirectory()) {
+          filename += '//index.html';
+          console.log('adding index.html', filename);
+        }
+
+        fs.readFile(filename, "binary", function(err, file) {
+          if(err) {
+            response.writeHead(500, {"Content-Type": "text/plain"});
+            response.write(err + "\n");
+            response.end();
+            return;
+          }
+
+          console.log(file.toString());
+          response.writeHead(200);
+          response.write(file);
+          response.end();
+          return;
+        });
+      });
     }
-    response.writeHead(statusCode, headers);
-    response.end(output);
+
+
   } else if (request.method === 'POST') {
     if (request.url === '/classes/messages') {
       statusCode = 201;
@@ -62,6 +103,9 @@ module.exports.handler = function(request, response) {
         // console.log(messages);
         output = JSON.stringify(dataStore);
 
+        response.writeHead(statusCode, headers);
+        response.end(output);
+
       });
     }
   }
@@ -76,14 +120,14 @@ var dataStore = {};
 
 var messages = [];
 
-messages.push({
-  createdAt: "2014-09-29T21:59:07.402Z",
-  objectId: "HqLtDAV7t3",
-  roomname: "lobby",
-  text: "send",
-  updatedAt: "2014-09-29T21:59:07.402Z",
-  username: "ralph"
-});
+// messages.push({
+//   createdAt: "2014-09-29T21:59:07.402Z",
+//   objectId: "HqLtDAV7t3",
+//   roomname: "lobby",
+//   text: "send",
+//   updatedAt: "2014-09-29T21:59:07.402Z",
+//   username: "ralph"
+// });
 
 dataStore.results = messages;
 
