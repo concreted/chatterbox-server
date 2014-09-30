@@ -56,7 +56,7 @@ module.exports.handler = function(request, response) {
 
         if (fs.statSync(filename).isDirectory()) {
           filename += '//index.html';
-          console.log('adding index.html', filename);
+          //console.log('adding index.html', filename);
         }
 
         fs.readFile(filename, "binary", function(err, file) {
@@ -67,7 +67,7 @@ module.exports.handler = function(request, response) {
             return;
           }
 
-          console.log(file.toString());
+          //console.log(file.toString());
           response.writeHead(200);
           response.write(file);
           response.end();
@@ -84,14 +84,22 @@ module.exports.handler = function(request, response) {
       console.log(statusCode, headers);
 
       request.on('data', function(data) {
-        messages.push(JSON.parse(data.toString()));
-        // console.log(JSON.stringify(dataStore));
-        // console.log(messages);
+        var message = JSON.parse(data.toString());
+
         output = JSON.stringify(data.toString());
 
-        response.writeHead(statusCode, headers);
-        response.end(output);
+        dataStore.results.push(message);
+        var database = JSON.stringify(dataStore);
 
+        fs.writeFile('./server/database.json', database, function (err) {
+          if (err) {
+            return console.log(err);
+          }
+          console.log(database);
+          response.writeHead(statusCode, headers);
+          response.end(output);
+          return;
+        });
       });
     }
     if (request.url === '/classes/room1') {
@@ -105,7 +113,7 @@ module.exports.handler = function(request, response) {
 
         response.writeHead(statusCode, headers);
         response.end(output);
-
+        return;
       });
     }
   }
@@ -115,6 +123,7 @@ module.exports.handler = function(request, response) {
    * up in the browser.*/
 
 };
+
 
 var dataStore = {};
 
@@ -130,6 +139,15 @@ var messages = [];
 // });
 
 dataStore.results = messages;
+
+fs.readFile('./server/database.json', 'utf8', function (err,data) {
+  if (err) {
+    return console.log(err);
+  }
+  dataStore = JSON.parse(data);
+  console.log(JSON.stringify(dataStore));
+});
+
 
 /* These headers will allow Cross-Origin Resource Sharing (CORS).
  * This CRUCIAL code allows this server to talk to websites that
